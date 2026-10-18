@@ -1,0 +1,34 @@
+{
+  "name": "shiguang-service-workspace",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1",
+    "build": "vue-tsc --noEmit && vite build",
+    "preview": "vite preview --host 127.0.0.1",
+    "test": "vitest run",
+    "format": "prettier --write src vite.config.ts tsconfig.json index.html"
+  },
+  "dependencies": {
+    "@element-plus/icons-vue": "^2.3.2",
+    "@vue/devtools-api": "^8.2.1",
+    "axios": "^1.20.0",
+    "element-plus": "^2.14.7",
+    "markdown-it": "^15.0.3",
+    "pinia": "^4.1.0",
+    "vue": "^3.5.44",
+    "vue-router": "^4.6.4"
+  },
+  "devDependencies": {
+    "@types/markdown-it": "^14.2.0",
+    "@types/node": "^26.6.5",
+    "@vitejs/plugin-vue": "^6.0.10",
+    "prettier": "^3.9.10",
+    "typescript": "^5.9.3",
+    "unplugin-vue-components": "^32.1.0",
+    "vite": "^8.3.4",
+    "vitest": "^4.1.12",
+    "vue-tsc": "^3.3.13"
+  }
+}

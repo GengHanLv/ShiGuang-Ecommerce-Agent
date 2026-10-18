@@ -1,0 +1,28 @@
+langchain>=0.3.0
+langgraph>=0.2.0
+langchain-openai>=0.2.0
+langchain-core>=0.3.0
+fastapi>=0.110.0
+uvicorn[standard]>=0.27.0
+pymilvus>=2.4.0
+sqlalchemy[asyncio]>=2.0.0
+aiomysql>=0.2.0
+redis>=5.0.0
+python-dotenv>=1.0.0
+loguru>=0.7.0
+python-multipart>=0.0.9
+aiofiles>=23.0.0
+openai>=1.40.0
+pydantic>=2.0.0
+# 本地 BGE-M3 向量化
+FlagEmbedding>=1.2.0
+sentence-transformers>=2.7.0
+# 文档处理
+python-docx>=1.1.0
+pypdf>=4.0.0
+
+# MySQL 8 caching_sha2_password authentication
+cryptography>=43.0.0
+
+# Shared compatibility range for transformers and sentence-transformers
+huggingface-hub>=1.31,<2.0
