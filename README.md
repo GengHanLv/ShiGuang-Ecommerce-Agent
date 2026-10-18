@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # 拾光 电商智能客服 Agent
 
 基于 **FastAPI + LangGraph + Vue 3** 的电商客服学习项目，支持多意图识别、订单查询、文档问答、跨会话偏好记忆，以及 JSON / SSE 两种回复方式。采用明确的状态图组织后端，适合从 Python 进阶到 Agent 工程实践。
@@ -200,7 +199,3 @@ npm run build
 ## 许可
 
 源码采用 [MIT License](LICENSE)。第三方依赖、模型和自行导入的资料按各自许可使用。
-=======
-# ShiGuang-Ecommerce-Agent
-电商服务Agent
->>>>>>> cbad2190d2e2a463ad394deae30c7843a22f9b14
