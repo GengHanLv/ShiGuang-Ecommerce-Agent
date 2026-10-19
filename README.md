@@ -132,9 +132,9 @@ backend/app/
 frontend/src/         Vue 页面、组件、状态与接口层
 examples/             可公开的虚构商品与 FAQ
 scripts/              配置生成、模型下载、演示入库
-tests/               行为回归测试
-evals/               规则回归与可选的模型评测
-docs/                入门教程、面试准备、上传手册
+tests/                行为回归测试
+evals/                规则回归与可选的模型评测
+docs/                 入门教程、面试准备、上传手册
 ```
 
 ## API
