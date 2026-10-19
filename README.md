@@ -137,8 +137,6 @@ evals/               规则回归与可选的模型评测
 docs/                入门教程、面试准备、上传手册
 ```
 
-继续学习：[架构入门讲解](docs/architecture-learning.md) · [项目面试与练习](docs/interview-guide.md) · [上传与发布](docs/publishing.md)。
-
 ## API
 
 除 `/health` 外，接口均使用 `X-API-Key`。用户标识由调用方提供，仅用于本地演示隔离；共享 API Key 不是完整的多用户认证。
