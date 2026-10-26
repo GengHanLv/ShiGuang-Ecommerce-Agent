@@ -1,0 +1,29 @@
+{
+  "servers": {
+    "web": {
+      "enabled": true,
+      "transport": "stdio",
+      "command": "REPLACE_WITH_ABSOLUTE_VENV_PYTHON",
+      "args": [
+        "-m",
+        "backend.app.tools.server"
+      ],
+      "allow_tools": [
+        "web_search",
+        "fetch_product_page",
+        "current_time",
+        "calculate_purchase_cost",
+        "compare_products",
+        "calculate_service_window"
+      ],
+      "retry_tools": [
+        "web_search",
+        "fetch_product_page",
+        "current_time",
+        "calculate_purchase_cost",
+        "compare_products",
+        "calculate_service_window"
+      ]
+    }
+  }
+}

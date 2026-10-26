@@ -1,7 +1,14 @@
-langchain>=0.3.0
-langgraph>=0.2.0
-langchain-openai>=0.2.0
-langchain-core>=0.3.0
+langchain>=1.0,<2
+langgraph>=1.0,<2
+langgraph-checkpoint-sqlite>=3,<4
+mcp>=1.26,<2
+httpx>=0.28,<1
+beautifulsoup4>=4.12,<5
+ddgs>=9,<10
+Pillow>=10
+reportlab>=4.2,<5
+langchain-openai>=1.0,<2
+langchain-core>=1.0,<2
 fastapi>=0.110.0
 uvicorn[standard]>=0.27.0
 pymilvus>=2.4.0
@@ -20,3 +27,9 @@ sentence-transformers>=2.7.0
 # 文档处理
 python-docx>=1.1.0
 pypdf>=4.0.0
+
+# MySQL 8 caching_sha2_password authentication
+cryptography>=43.0.0
+
+# Shared compatibility range for transformers and sentence-transformers
+huggingface-hub>=1.31,<2.0

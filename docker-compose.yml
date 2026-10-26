@@ -4,15 +4,15 @@ services:
     container_name: ecommerce-mysql
     image: mysql:8.0
     environment:
-      MYSQL_ROOT_PASSWORD: 123456
+      MYSQL_ROOT_PASSWORD: ${MYSQL_PASSWORD:?Set MYSQL_PASSWORD in .env}
       MYSQL_DATABASE: ecommerce
     ports:
-      - "3307:3306"          # 映射到 3307 避免和本机 MySQL 冲突
+      - "127.0.0.1:3307:3306" # 映射到 3307 避免和本机 MySQL 冲突
     volumes:
       - ./volumes/mysql:/var/lib/mysql
       - ./init_db.sql:/docker-entrypoint-initdb.d/init_db.sql
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      test: [ "CMD", "mysqladmin", "ping", "-h", "localhost" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -21,4 +21,11 @@ services:
     container_name: ecommerce-redis
     image: redis:7-alpine
     ports:
-      - "6379:6379"
+      - "127.0.0.1:6380:6379"
+    restart: unless-stopped
+    volumes:
+      - ecommerce_redis_data:/data # 属于 redis 服务
+    command: [ "redis-server", "--appendonly", "yes" ] # 属于 redis 服务
+
+volumes:
+  ecommerce_redis_data: # 顶层只声明命名卷，值为空即可

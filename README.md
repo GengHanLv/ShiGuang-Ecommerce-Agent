@@ -1,255 +1,169 @@
-# 电商智能客服 Agent
+# 拾光 · 电商智能客服
 
-## 简介
+基于 **Vue 3 + FastAPI + LangGraph + MCP** 的电商客服 Agent 工作台，提供商品咨询、平台规则检索、订单查询与个性化服务。
 
-面向电商售后场景的智能客服系统：基于 LangGraph 做多意图路由与工具并行，基于 Milvus 做 FAQ/商品知识检索与用户长期记忆，基于 MySQL 做订单实时查询，基于 Redis 做会话持久化与 RAG 缓存，对外提供 FastAPI（JSON / SSE 流式）接口。
+[项目仓库](https://github.com/GengHanLv/ShiGuang-Ecommerce-Agent) · [架构与功能](docs/architecture.md) · [开发与部署](docs/development.md) · [检索评测](backend/evals/README.md) · [GitHub 发布指南](docs/publishing.md)
 
-## 功能特性
+## 功能概览
 
-- 多意图并行：单轮支持「查订单 + 问退货政策」；`asyncio.gather` 并行调用工具
-- 意图识别：规则高置信命中；未命中或部分命中时由 LLM 在白名单内补全，再经后置门禁检验
-- RAG 知识问答：Milvus 稠密/轻量混合检索 + 阈值过滤 + Prompt 约束（未写明的规格/功能禁止编造）
-- 长期记忆：按 `user_id` 写入 preference/fact；同主题替换、可更新/删除；检索后按情境注入 Prompt
-- 订单查询：异步 SQLAlchemy 参数化查库，支持订单号槽位抽取
-- 人工转接：关键词规则识别 + 固定话术，避免模型误转
-- 会话记忆：Redis 持久化（TTL + 最近 N 轮截断），不可用时内存降级
-- 流式输出：`/chat/stream` SSE 推送 token；主链路异常时降级话术引导转人工
-- 知识入库：`/upload` 支持 PDF / TXT / DOCX 解析、分块、向量化写入 Milvus
-- 离线评测：意图多标签命中率 / F1 + LLM-as-Judge；另有记忆规则回归脚本
+- **ReAct Agent**：模型按需调用工具，支持 SSE 流式回复、任务状态查看与中断恢复。
+- **知识检索**：PDF / TXT / DOCX 导入，Milvus 向量检索与 BM25 混合召回，结合型号过滤、RRF 和可选 LLM 精排。
+- **订单与记忆**：查询当前用户订单，保存聊天历史、用户偏好和长期事实。
+- **联网工具**：公开网页搜索、商品页面读取和真实商品图片展示，通过 MCP 扩展服务。
+- **咨询成果**：购物预算、参数对比、服务期限计算，以及用户私有 PDF 导出。
+- **工作台**：登录、聊天、知识库、设置页面；管理员负责知识导入和 MCP 管理。
 
-## 技术栈
+当前订单能力为只读查询，退款、改地址、取消订单和真人客服转接尚未对接真实业务系统。仓库附带模拟订单 SQL，不附带私有知识资料、模型权重或运行数据库。
 
-| 层级 | 技术 |
-|------|------|
-| Agent 编排 | LangGraph / LangChain / OpenAI 兼容 API |
-| 对话模型 | 默认 `gpt-4o-mini`（`CHAT_MODEL`） |
-| 向量 | 本地 BGE-M3（1024 维） |
-| API | FastAPI + Uvicorn |
-| 向量库 | Milvus |
-| 业务库 | MySQL 8 + SQLAlchemy（async） |
-| 缓存/会话 | Redis |
-| 日志 | loguru |
-
-## 系统架构
+## 项目结构
 
 ```text
-Client
-  │  X-API-Key
-  ▼
-FastAPI (/chat, /chat/stream, /upload, /health)
-  │
-  ▼
-LangGraph: recall_memory → classify → tools → generate
-  │              ├─ Milvus: user_memory（按 user_id 长期记忆）
-  │              ├─ MySQL: query_order
-  │              ├─ Milvus: FAQ / product RAG (+ Redis cache)
-  │              └─ transfer: rule + fixed reply
-  ▼
-Redis: session history (TTL, last N turns)
-  + 回复后抽取记忆写回 user_memory（失败不影响主回复）
+ShiGuang-Ecommerce-Agent/
+├── backend/
+│   ├── app/
+│   │   ├── agent/              # LangGraph 状态图、任务与工具回执
+│   │   ├── api/                # 请求模型、依赖与路由
+│   │   ├── core/               # 配置、模型客户端与日志
+│   │   ├── infrastructure/     # MySQL、SQLite、Redis、Milvus、嵌入
+│   │   ├── memory/             # 会话、偏好与长期记忆
+│   │   ├── rag/                # 文档导入、召回、排序与证据检查
+│   │   ├── security/           # 账户与 Cookie 会话认证
+│   │   └── tools/              # 业务、联网、MCP 与 PDF 工具
+│   ├── tests/                  # 后端测试
+│   ├── evals/                  # 检索评测与记忆回归
+│   ├── tools/start-local.ps1   # Windows 本地启动器
+│   └── mcp.servers.example.json
+├── frontend/                  # Vue 3 + TypeScript + Vite
+│   ├── src/                   # 页面、组件、状态与 API
+│   ├── public/
+│   └── package-lock.json      # 提交锁文件，使用 npm ci 安装
+├── docs/                      # 架构、开发与发布说明
+├── .env.example               # 后端环境变量模板
+├── docker-compose.yml         # MySQL 和 Redis，不包含 Milvus
+├── init_db.sql                # 建表及模拟订单
+├── pyproject.toml             # Python 包与 Ruff 配置
+├── requirements.txt           # 后端运行依赖
+├── requirements-dev.txt       # 开发依赖
+├── start-local.bat            # Windows 启动入口
+└── LICENSE
 ```
 
-意图分类（`classify`）：
+本地 `data/` 存放模型、知识资料、身份、历史、检查点、导出文件和日志；`volumes/` 存放 MySQL 数据，`Others/` 存放私人资料及备份。这些目录均不提交 Git。
 
-```text
-规则词典 + 偏好规则
-  ├─ 高置信命中 → 后置门禁 → 最终意图
-  └─ 未命中 / 部分命中 → LLM（仅白名单意图）→ 后置门禁 → 最终意图
+## 快速启动
+
+以下命令以 **Windows PowerShell** 为例，从仓库根目录执行。已有本地项目可跳过克隆。
+
+### 1. 准备环境与依赖
+
+需要 Python 3.11+、Node.js 20.19+（20.x）或 22.12+、可用的 Milvus 服务、本地 BGE-M3 模型，以及支持原生工具调用的 OpenAI 兼容模型 API。使用下方数据库启动方式还需要 Docker Compose。
+
+```powershell
+git clone https://github.com/GengHanLv/ShiGuang-Ecommerce-Agent.git
+cd ShiGuang-Ecommerce-Agent
+python -m venv .venv
+.venv\Scripts\python.exe -m pip install -r requirements.txt
+npm --prefix frontend ci
 ```
 
-## 目录结构
+Linux / macOS 使用 `.venv/bin/python` 替换上述 Python 路径，并按后文手动启动服务；一键启动器仅适用于 Windows。
 
-```text
-├── docker-compose.yml   # MySQL + Redis（MySQL 映射 3307）
-├── init_db.sql          # 演示订单数据
-├── .env.example         # 环境变量模板
-├── .gitignore
-├── requirements.txt
-├── logger.py
-└── src/
-    ├── main.py                   # FastAPI 入口（鉴权 / 降级）
-    ├── graph.py                  # LangGraph 状态图
-    ├── memory_signals.py         # 意图/偏好/查单信号词与判定
-    ├── tools.py                  # 订单查询
-    ├── rag_tool.py               # RAG 检索 + 缓存
-    ├── redis_client.py           # Redis 连接（会话/RAG 共用）
-    ├── memory.py                 # 短期会话管理
-    ├── long_term_memory.py       # 用户长期记忆（检索/抽取/同主题替换）
-    ├── memory_regression_cases.py # 记忆/意图规则回归
-    ├── document_loader.py        # 文档入库
-    ├── insert_data.py            # 初始化 FAQ/商品向量
-    ├── embeddings.py             # 本地 BGE-M3 向量化
-    ├── init_milvus.py            # Milvus 封装
-    ├── evaluation.py             # 离线评测
-    ├── debug_rag.py              # RAG 检索冒烟
-    ├── graph_flow.md             # 状态图流程说明
-    ├── database.py
-    └── config.py
+### 2. 配置环境
+
+首次运行复制模板；已有 `.env` 时保留现有配置：
+
+```powershell
+if (-not (Test-Path .env)) { Copy-Item .env.example .env }
 ```
 
-## 运行步骤
+编辑 `.env`，至少核对以下配置：
 
-### 1. 环境要求
+| 配置 | 用途 |
+| --- | --- |
+| `OPENAI_API_KEY`、`OPENAI_BASE_URL`、`CHAT_MODEL` | 模型服务凭据、地址与模型名 |
+| `BGE_M3_MODEL_PATH`、`EMBEDDING_DIM` | 完整本地 BGE-M3 模型目录；默认 1024 维 |
+| `MYSQL_*` | 订单数据库；示例 Compose 使用本机 3307 端口、数据库 ecommerce |
+| `REDIS_HOST`、`REDIS_PORT` | 示例 Compose 使用本机 6380 端口 |
+| `MILVUS_HOST`、`MILVUS_PORT` | 单独准备的 Milvus 实例，默认端口 19530 |
+| `AUTH_ADMIN_PASSWORD` | 可选初始管理员密码；留空则首次启动随机生成 |
+| `RAG_RERANKER` | `llm` 使用模型精排；`rules` 使用规则与 RRF 排序 |
+| `PDF_FONT_PATH` | 可选可嵌入中文 TrueType 字体路径 |
 
-- Python 3.10+
-- Docker（用于 MySQL / Redis；也可改 `.env` 使用本机 MySQL）
-- 独立运行的 Milvus（默认 `127.0.0.1:19530`；本仓库 compose 未包含 Milvus）
-- OpenAI 兼容 API Key
-- 本地 BGE-M3 模型路径（`BGE_M3_MODEL_PATH`）
+完整配置见 [.env.example](.env.example)。数据库示例密码仅供本地开发。相对模型路径以项目根目录为基准；模型权重需要自行准备。
 
-### 2. 安装依赖
+### 3. 启动基础服务
 
-```bash
-python -m venv venv
-venv\Scripts\activate
-pip install -r requirements.txt
+```powershell
+docker compose up -d mysql redis
+docker compose ps
 ```
 
-macOS / Linux：
+Compose **只提供 MySQL 与 Redis**。另行启动 Milvus，并确认模型目录已准备好。`init_db.sql` 只在 MySQL 数据目录首次初始化时执行；修改 SQL 不会自动更新已有数据库。
 
-```bash
-source venv/bin/activate
+### 4. 启动应用
+
+安装依赖、配置环境并启动基础服务后，Windows 可运行：
+
+```powershell
+.\start-local.bat
 ```
 
-### 3. 配置环境变量
+启动器启动前后端并打开浏览器，日志位于 `data/logs/startup/`。它不安装依赖、不启动 Docker；已有服务会先校验再尝试复用。可使用 `.\start-local.bat -NoBrowser` 不自动打开浏览器。
 
-```bash
-cp .env.example .env
+也可在两个终端分别启动：
+
+```powershell
+# 终端一：项目根目录
+.venv\Scripts\python.exe -m uvicorn backend.app.main:app --host 127.0.0.1 --port 8001
 ```
 
-编辑 `.env`，至少填写：
-
-- `OPENAI_API_KEY` / `OPENAI_BASE_URL`
-- `CHAT_MODEL`（可选，默认 `gpt-4o-mini`）
-- `BGE_M3_MODEL_PATH`（本地模型目录，维度 `EMBEDDING_DIM=1024`）
-- `MYSQL_PORT=3307`（与 `docker-compose.yml` 端口映射一致；本机 MySQL 常用 `3306`）
-- `API_KEY`（调用接口时的 `X-API-Key`）
-
-### 4. 启动基础设施
-
-```bash
-docker compose up -d
+```powershell
+# 终端二：项目根目录
+npm --prefix frontend run dev
 ```
 
-启动后：
+- 工作台：[http://127.0.0.1:5173](http://127.0.0.1:5173)
+- API 文档：[http://127.0.0.1:8001/docs](http://127.0.0.1:8001/docs)
+- 健康检查：[http://127.0.0.1:8001/health](http://127.0.0.1:8001/health)
 
-- MySQL：`localhost:3307`（库名 `ecommerce`，演示用户 `user123`，compose 默认密码见 `docker-compose.yml`）
-- Redis：`localhost:6379`
+前端默认通过 `/api` 代理访问后端 8001 端口。若修改后端端口，在运行前端前设置 `$env:API_PROXY_TARGET = "http://127.0.0.1:新端口"`。
 
-若容器名冲突：
+### 5. 登录并导入知识
 
-```bash
-docker start ecommerce-mysql ecommerce-redis
+管理员默认用户名为 `admin`。未设置初始密码时，从本机 `data/auth/bootstrap-admin.json` 获取生成的密码。修改环境变量不会重置已存在的管理员。
+
+默认管理员业务身份 `user123` 对应 SQL 中的模拟订单；注册用户拥有独立身份。在知识库页面上传自己的 PDF、TXT 或 DOCX，扫描 PDF 需先 OCR。首次检索加载模型可能较慢。
+
+管理员可通过 API 文档调用 `POST /knowledge/migrate` 初始化或迁移结构化集合。迁移成功后切换映射、保留原集合；完整型号标量过滤需要 v2 集合，详见[架构说明](docs/architecture.md)。
+
+## 开发与验证
+
+```powershell
+.venv\Scripts\python.exe -m pip install -r requirements-dev.txt
+.venv\Scripts\python.exe -m unittest discover -s backend/tests -v
+.venv\Scripts\python.exe -m backend.evals.memory_regression
+.venv\Scripts\python.exe -m ruff check backend/app backend/tests
+npm --prefix frontend test
+npm --prefix frontend run build
 ```
 
-Milvus 需本机 `19530` 端口可用。
+检索评测需要服务、知识库与人工标注数据，参见[评测说明](backend/evals/README.md)。API 列表、扩展入口、MCP 配置和持久化要求见[开发与部署说明](docs/development.md)。
 
-### 5. 初始化知识库
+## 常见问题
 
-对话模型默认 `gpt-4o-mini`；向量使用本地 **BGE-M3**
+| 现象 | 检查方法 |
+| --- | --- |
+| 页面能打开但无法对话 | 检查模型凭据、工具调用支持与后端日志 |
+| 知识上传或检索失败 | 检查 Milvus、BGE-M3 路径、向量维度及文档是否包含可提取文本 |
+| 查不到演示订单 | 确认 SQL 已初始化、数据库配置匹配，且登录身份为 user123 |
+| 前端提示 API 连接失败 | 检查后端端口与 Vite 代理，修改代理后重启前端 |
+| 中文 PDF 字体异常 | 配置可嵌入的中文 TrueType 字体，重启后端后重新导出 |
+| 新克隆后没有历史或知识 | 运行数据不在仓库中，需要重新导入或恢复自己的备份 |
 
-```bash
-cd src
-python insert_data.py --reset
-```
+`npm run build` 只生成前端静态文件，不会打包 Python 后端。部署时需独立运行后端、配置 `/api` 反向代理，并持久化数据库与必要的 `data/` 子目录。HTTPS 部署设置 `AUTH_COOKIE_SECURE=true`，配置实际跨域来源，并按需关闭公开注册。
 
-首次或空库可直接 `python insert_data.py`。
+## 项目来源与许可证
 
-检索冒烟：
+当前维护仓库：[GengHanLv/ShiGuang-Ecommerce-Agent](https://github.com/GengHanLv/ShiGuang-Ecommerce-Agent)。
 
-```bash
-python debug_rag.py
-```
-
-### 6. 启动 API
-
-```bash
-cd src
-uvicorn main:app --host 0.0.0.0 --port 8000 --reload
-```
-
-- Swagger：http://127.0.0.1:8000/docs
-- 健康检查：http://127.0.0.1:8000/health
-
-## API 说明
-
-请求头（`/health` 除外）：
-
-```http
-X-API-Key: <你的 API_KEY>
-```
-
-鉴权失败返回 **401**。`/chat`、`/chat/stream` 主链路异常时返回降级话术（引导稍后重试或转人工）；长期记忆写入失败不影响主回复。
-
-### POST /chat
-
-```json
-{
-  "user_id": "user123",
-  "message": "订单号1到哪了？",
-  "session_id": "demo-001"
-}
-```
-
-返回字段：`reply`、`session_id`、`intents`、`memory_hits`。
-
-### POST /chat/stream
-
-SSE 流式输出，事件类型：`token` / `done` / `error`。
-
-### POST /upload
-
-表单字段：
-
-- `file`：PDF / TXT / DOCX
-- `collection`：`faq` 或 `product_knowledge`
-
-## 长期记忆（用户级 RAG）
-
-- 集合：`user_memory`（按 `user_id` 隔离）
-- 类型：主要写入 `preference` / `fact`
-- 流程：每轮先向量检索；有命中且非「正在陈述新偏好/删改」时注入 Prompt，结合订单/FAQ 情境化回答
-- 写入：回复后抽取；同主题（如收货时段 / 电话通知 / 快递公司）变更时先删旧再写新；支持取消类删除
-- 跨 `session_id` 仍可按同一 `user_id` 召回；订单状态仍以 MySQL 为准
-- 记忆在**本轮回复之后**写入，验证请下一轮再问
-
-## 推荐测试用例
-
-| 场景 | message | 期望 |
-|------|---------|------|
-| FAQ | 怎么退货？ | intents 含 `knowledge` |
-| 订单 | 查一下我的订单 | 返回 `user123` 订单状态 |
-| 订单号 | 订单号1到哪了？ | `order_query`，非转人工 |
-| 改收货信息 | 刚下单，收货手机号填错了，能换绑吗 | `order_query`，查单后说明 |
-| 多意图 | 我有个订单要退款 | `order_query` + `knowledge` |
-| 转人工 | 我要转人工 | 固定转接话术 |
-| 偏好写入 | 记住我以后都晚上收货 | 确认偏好；日志有长期记忆写入 |
-| 偏好并存 | 再发「快递到了请打电话通知我」 | 时段与电话偏好并存 |
-| 情境用记忆 | 什么时候能收到我的订单？ | 订单事实 + 相关偏好备注 |
-| 同主题更新 | 以后改成白天收货 | 替换收货时段，不误删电话偏好 |
-| 负例 | 以后快递到了打电话，防止漏看订单信息 | 记偏好，**不**误查单 |
-| 知识防幻觉 | 新品手机支持无线充电吗？（资料未写） | 说明无法确认，不编造「不支持」 |
-
-## 离线评测与回归
-
-规则回归（不依赖 LLM/Milvus）：
-
-```bash
-cd src
-python memory_regression_cases.py
-```
-
-意图 + 回答质量：
-
-```bash
-cd src
-python evaluation.py
-```
-
-端到端回答质量（真跑 Agent，较慢）：
-
-```bash
-python -c "import asyncio; from evaluation import evaluate_answer_quality; asyncio.run(evaluate_answer_quality(use_agent=True))"
-```
-
-输出意图子集命中率、平均 F1，以及 LLM-as-Judge 分数（`use_agent=False` 为参考答案冒烟，`True` 为真实 Agent）。
+基于原项目 [TT959/Ecommerce-Agent](https://github.com/TT959/Ecommerce-Agent) 演进，保留 [MIT 许可证及原版权声明](LICENSE)。设计参考 ReAct 与 LangGraph。
